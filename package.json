@@ -1,0 +1,49 @@
+{
+  "name": "@south-loop-studios/cf-pages-cleaner",
+  "version": "0.1.0",
+  "description": "Clean up old Cloudflare Pages deployments — terminal UI with an optional local web GUI.",
+  "type": "module",
+  "main": "src/index.mjs",
+  "bin": {
+    "cf-pages-cleaner": "bin/cf-pages-cleaner.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "start": "node bin/cf-pages-cleaner.mjs",
+    "dev": "node bin/cf-pages-cleaner.mjs",
+    "prepublishOnly": "node bin/cf-pages-cleaner.mjs --version >/dev/null"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/South-Loop-Studios/cf-pages-cleaner.git"
+  },
+  "homepage": "https://github.com/South-Loop-Studios/cf-pages-cleaner#readme",
+  "bugs": {
+    "url": "https://github.com/South-Loop-Studios/cf-pages-cleaner/issues"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.2.1",
+    "dotenv": "^16.4.7",
+    "kleur": "^4.1.5",
+    "open": "^10.1.0"
+  },
+  "keywords": [
+    "cloudflare",
+    "cloudflare-pages",
+    "pages",
+    "cleanup",
+    "deployments",
+    "cli",
+    "devops"
+  ],
+  "license": "MIT",
+  "author": "Ben Weatherill <bweatherill@icloud.com>"
+}
