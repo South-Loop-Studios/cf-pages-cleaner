@@ -1,5 +1,5 @@
 {
-  "name": "@south-loop-studios/cf-pages-cleaner",
+  "name": "@southloopstudios/cf-pages-cleaner",
   "version": "0.1.0",
   "description": "Clean up old Cloudflare Pages deployments — terminal UI with an optional local web GUI.",
   "type": "module",

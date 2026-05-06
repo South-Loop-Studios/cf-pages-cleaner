@@ -32,10 +32,10 @@ Protected (not selectable):
 
 ```bash
 # zero install — runs the latest published version
-npx @south-loop-studios/cf-pages-cleaner
+npx @southloopstudios/cf-pages-cleaner
 
 # or install it globally
-npm install -g @south-loop-studios/cf-pages-cleaner
+npm install -g @southloopstudios/cf-pages-cleaner
 cf-pages-cleaner
 ```
 
@@ -134,7 +134,7 @@ CLOUDFLARE_ACCOUNT_ID=abcd1234...
 **c. One shot** — inline for a single invocation:
 
 ```bash
-CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... npx @south-loop-studios/cf-pages-cleaner
+CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... npx @southloopstudios/cf-pages-cleaner
 ```
 
 ---
