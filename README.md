@@ -32,21 +32,16 @@ Protected (not selectable):
 
 ```bash
 # zero install — runs the latest published version
-npx @southloopstudios/cf-pages-cleaner
+npx @southloopstudios/cf-pages-cleaner setup
 
 # or install it globally
 npm install -g @southloopstudios/cf-pages-cleaner
-cf-pages-cleaner
+cf-pages-cleaner setup
 ```
 
-You'll need two env vars in your shell (see [Setup](#setup) below):
-
-```bash
-export CLOUDFLARE_API_TOKEN="cf_xxx..."
-export CLOUDFLARE_ACCOUNT_ID="abcd1234..."
-```
-
-Then:
+`setup` walks you through creating a Cloudflare API token, picking an
+account, and saving the credentials to either a `.env` file or your
+shell rc. After that, just run:
 
 ```bash
 cf-pages-cleaner               # interactive terminal
@@ -54,6 +49,9 @@ cf-pages-cleaner --web         # local browser GUI on http://127.0.0.1:8765
 cf-pages-cleaner --dry-run     # preview the kill list, no delete
 cf-pages-cleaner --project my-site  # skip the project picker
 ```
+
+Prefer setting the env vars yourself? Skip `setup` and see [Manual setup](#setup)
+below.
 
 `cf-pages-cleaner --help` prints all flags.
 
@@ -76,6 +74,10 @@ cf-pages-cleaner --project my-site  # skip the project picker
 ---
 
 ## Setup
+
+> **Tip.** Run `cf-pages-cleaner setup` to do all of this interactively —
+> the rest of this section is the manual version, useful if you want to
+> script the credentials or already have them.
 
 ### 1. Get a Cloudflare API token
 
@@ -316,6 +318,7 @@ Project layout:
 ```
 bin/cf-pages-cleaner.mjs       # shebang entry
 src/index.mjs                  # arg parsing & dispatch
+src/setup.mjs                  # guided first-run setup
 src/api.mjs                    # Cloudflare REST client
 src/terminal.mjs               # interactive terminal flow
 src/web.mjs                    # local HTTP server
