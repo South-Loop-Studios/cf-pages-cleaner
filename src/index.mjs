@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util';
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { CloudflareClient } from './api.mjs';
 import { runTerminal } from './terminal.mjs';
@@ -27,7 +28,9 @@ Auth (set in your shell, or in a .env file in the cwd):
   CLOUDFLARE_ACCOUNT_ID  account that owns the Pages project
 `;
 
-const VERSION = '0.1.0';
+const VERSION = JSON.parse(
+  readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'),
+).version;
 
 export async function main(argv) {
   // dotenv: load from cwd if a .env exists, but don't clobber real env vars.
