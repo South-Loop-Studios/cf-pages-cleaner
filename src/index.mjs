@@ -8,10 +8,24 @@ import { runTerminal } from './terminal.mjs';
 import { runWeb } from './web.mjs';
 import { c } from './utils.mjs';
 
-const HELP = `cf-pages-cleaner — clean up old Cloudflare Pages deployments.
+const PKG = JSON.parse(
+  readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'),
+);
+const VERSION = PKG.version;
+
+// `cf-pages-cleaner` if the user globally-installed; `npx <pkg>` if they're
+// running ad-hoc via npx. npx caches binaries under ~/.npm/_npx/<hash>/...
+// so a `/_npx/` segment in argv[1] is a reliable signal.
+function invocationName() {
+  const bin = process.argv[1] || '';
+  return /[/\\]_npx[/\\]/.test(bin) ? `npx ${PKG.name}` : 'cf-pages-cleaner';
+}
+
+function helpText(inv) {
+  return `cf-pages-cleaner — clean up old Cloudflare Pages deployments.
 
 Usage:
-  cf-pages-cleaner [command] [options]
+  ${inv} [command] [options]
 
 Commands:
   setup              Guided one-time setup for credentials. Recommended on first run.
@@ -30,12 +44,9 @@ Auth (set in your shell, or in a .env file in the cwd):
   CLOUDFLARE_API_TOKEN   token with the "Pages — Edit" permission
   CLOUDFLARE_ACCOUNT_ID  account that owns the Pages project
 
-Tip: \`cf-pages-cleaner setup\` will create both for you interactively.
+Tip: \`${inv} setup\` walks you through creating both interactively.
 `;
-
-const VERSION = JSON.parse(
-  readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'),
-).version;
+}
 
 export async function main(argv) {
   // dotenv: load from cwd if a .env exists, but don't clobber real env vars.
@@ -57,7 +68,9 @@ export async function main(argv) {
     allowPositionals: true,
   });
 
-  if (values.help) { process.stdout.write(HELP); return 0; }
+  const inv = invocationName();
+
+  if (values.help) { process.stdout.write(helpText(inv)); return 0; }
   if (values.version) { process.stdout.write(VERSION + '\n'); return 0; }
 
   const cmd = positionals[0];
@@ -66,7 +79,7 @@ export async function main(argv) {
     return await runSetup({ cwd: process.cwd() });
   }
   if (cmd) {
-    process.stderr.write(`Unknown command: ${cmd}\nRun \`cf-pages-cleaner --help\`.\n`);
+    process.stderr.write(`Unknown command: ${cmd}\nRun \`${inv} --help\`.\n`);
     return 2;
   }
 
@@ -76,7 +89,7 @@ export async function main(argv) {
     process.stderr.write(
       c.red('Missing credentials.\n') +
       '\nFirst time? Run:\n' +
-      '  ' + c.bold('cf-pages-cleaner setup') + '\n' +
+      '  ' + c.bold(`${inv} setup`) + '\n' +
       'and it will walk you through creating the token, picking the account, and saving them.\n' +
       '\nOr set them yourself before running:\n' +
       '  CLOUDFLARE_API_TOKEN   token with the "Pages — Edit" permission\n' +
