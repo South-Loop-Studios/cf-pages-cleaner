@@ -1,7 +1,7 @@
 import { confirm, password, select } from '@inquirer/prompts';
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import open from 'open';
 import { bold, c } from './utils.mjs';
 
@@ -156,13 +156,20 @@ async function listAccounts(token) {
 }
 
 function detectShellRc() {
-  const shell = process.env.SHELL || '';
-  if (shell.endsWith('/zsh')) return resolve(homedir(), '.zshrc');
-  if (shell.endsWith('/bash')) {
+  const base = basename(process.env.SHELL || '');
+  if (base === 'zsh' || base.startsWith('zsh-')) return resolve(homedir(), '.zshrc');
+  if (base === 'bash' || base.startsWith('bash-')) {
     const profile = resolve(homedir(), '.bash_profile');
     return existsSync(profile) ? profile : resolve(homedir(), '.bashrc');
   }
   return null;
+}
+
+// Escape a value for safe inclusion inside a double-quoted shell string or a
+// double-quoted .env value. Covers backslash, double-quote, dollar (var
+// expansion), and backtick (command substitution).
+function escapeForDoubleQuoted(s) {
+  return s.replace(/[\\"$`]/g, '\\$&');
 }
 
 function tildify(p) {
@@ -184,8 +191,12 @@ function writeEnvFile(path, token, accountId) {
       .join('\n');
     if (preserved && !preserved.endsWith('\n')) preserved += '\n';
   }
+  // Always quote values; dotenv strips the surrounding quotes when reading.
+  // Escaping defends against tokens containing `"`, `\`, `$`, or backtick.
+  const t = escapeForDoubleQuoted(token);
+  const a = escapeForDoubleQuoted(accountId);
   const content =
-    preserved + `CLOUDFLARE_API_TOKEN=${token}\nCLOUDFLARE_ACCOUNT_ID=${accountId}\n`;
+    preserved + `CLOUDFLARE_API_TOKEN="${t}"\nCLOUDFLARE_ACCOUNT_ID="${a}"\n`;
   writeFileSync(path, content, { mode: 0o600 });
 }
 
@@ -194,20 +205,25 @@ function writeEnvFile(path, token, accountId) {
  * new one. Lets users re-run setup without piling up duplicate exports.
  */
 function upsertShellRc(path, token, accountId) {
+  const t = escapeForDoubleQuoted(token);
+  const a = escapeForDoubleQuoted(accountId);
   const block =
     `${RC_MARKER}\n` +
-    `export CLOUDFLARE_API_TOKEN="${token}"\n` +
-    `export CLOUDFLARE_ACCOUNT_ID="${accountId}"\n` +
+    `export CLOUDFLARE_API_TOKEN="${t}"\n` +
+    `export CLOUDFLARE_ACCOUNT_ID="${a}"\n` +
     `# end cf-pages-cleaner\n`;
 
   if (!existsSync(path)) {
     writeFileSync(path, '\n' + block);
     return;
   }
+  // Single replace + change-detection. Avoids the regex.test/replace
+  // lastIndex footgun when the regex carries the `g` flag.
   const original = readFileSync(path, 'utf8');
   const re = new RegExp(`${RC_MARKER}[\\s\\S]*?# end cf-pages-cleaner\\n?`, 'g');
-  if (re.test(original)) {
-    writeFileSync(path, original.replace(re, block));
+  const replaced = original.replace(re, block);
+  if (replaced !== original) {
+    writeFileSync(path, replaced);
   } else {
     appendFileSync(path, (original.endsWith('\n') ? '' : '\n') + '\n' + block);
   }
