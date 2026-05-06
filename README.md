@@ -82,17 +82,16 @@ below.
 ### 1. Get a Cloudflare API token
 
 1. Open <https://dash.cloudflare.com/profile/api-tokens>.
-2. Click **Create Token**.
-3. Find the **Cloudflare Pages — Edit** template, click **Use template**.
-4. Under **Account Resources**, scope it to the account that owns the Pages
-   projects you want to clean.
-5. (Optional) Add a TTL so the token auto-expires.
-6. Click **Continue to summary** → **Create Token** and **copy it now** —
-   it's shown once.
+2. Click **Create Token** → **Get started** (custom token).
+3. Under **Permissions**, add:
+   - **Account** → **Cloudflare Pages** → **Edit**
+4. Under **Account Resources**, choose **Include** → the account that owns the
+   Pages projects you want to clean.
+5. (Optional) Set a TTL so the token auto-expires.
+6. **Continue to summary** → **Create Token**, then copy it (it's shown once).
 
-The template's permission set is `Account → Cloudflare Pages → Edit`, which is
-exactly enough to list and delete deployments. Don't use a Global API Key —
-that's wildly over-privileged for this.
+That permission set is exactly enough to list and delete deployments. Don't
+use a Global API Key — that's wildly over-privileged for this.
 
 ### 2. Find your account ID
 
@@ -250,7 +249,8 @@ cf-pages-cleaner --web --no-open
 ## Troubleshooting
 
 **`Cloudflare API: Authentication error`**
-Token wrong or expired. Re-create from the *Cloudflare Pages — Edit* template.
+Token wrong or expired. Create a fresh one with the *Account → Cloudflare
+Pages → Edit* permission.
 
 **`Cloudflare API: Authorization error`**
 Token is fine but doesn't have access to *this* account. Check the

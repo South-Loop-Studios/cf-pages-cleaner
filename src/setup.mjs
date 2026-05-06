@@ -1,8 +1,7 @@
-import { confirm, password, select } from '@inquirer/prompts';
+import { confirm, input, password, select } from '@inquirer/prompts';
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, resolve } from 'node:path';
-import open from 'open';
 import { bold, c } from './utils.mjs';
 
 const TOKEN_URL = 'https://dash.cloudflare.com/profile/api-tokens';
@@ -27,24 +26,16 @@ export async function runSetup({ cwd } = {}) {
 
   // 1. token
   console.log(bold('Step 1 — API token'));
-  console.log('Use the ' + c.cyan('"Cloudflare Pages — Edit"') + ' template. Scope it to');
-  console.log('the account that owns the Pages projects you want to clean.');
+  console.log('Open this URL in your browser:');
+  console.log('  ' + c.cyan(TOKEN_URL));
+  console.log();
+  console.log('Click ' + bold('Create Token') + ' → ' + bold('Get started') + ' (custom token), then add:');
+  console.log('  ' + c.bold('Permissions:') + '       Account → Cloudflare Pages → Edit');
+  console.log('  ' + c.bold('Account Resources:') + ' Include → the account that owns your Pages projects');
+  console.log('Click ' + bold('Continue to summary') + ' → ' + bold('Create Token') + ' and copy the token.');
   console.log();
 
-  const openBrowser = await confirm({
-    message: `Open ${c.cyan(TOKEN_URL)} in your browser?`,
-    default: true,
-  });
-  if (openBrowser) {
-    try {
-      await open(TOKEN_URL);
-    } catch {
-      console.log(c.yellow('  (Could not auto-open — visit the URL above manually.)'));
-    }
-  }
-
   let token;
-  let accounts;
   while (true) {
     token = (
       await password({
@@ -54,10 +45,10 @@ export async function runSetup({ cwd } = {}) {
       })
     ).trim();
 
-    process.stdout.write(c.gray('  Validating… '));
+    process.stdout.write(c.gray('  Validating token… '));
     try {
-      accounts = await listAccounts(token);
-      process.stdout.write(c.green('✓ valid\n'));
+      await verifyToken(token);
+      process.stdout.write(c.green('✓ active\n'));
       break;
     } catch (err) {
       process.stdout.write(c.red(`✗ ${err.message}\n`));
@@ -69,19 +60,22 @@ export async function runSetup({ cwd } = {}) {
 
   // 2. account
   console.log(bold('Step 2 — Account'));
-  if (accounts.length === 0) {
-    console.log(
-      c.red('Token has no accessible accounts.') +
-        '\nCheck the token\'s "Account Resources" scope.',
-    );
-    return 1;
+  // Try to enumerate accounts via /accounts. If the token doesn't have the
+  // Account Settings: Read permission, this returns an empty list — which is
+  // fine; we fall through to manual entry.
+  let accounts = [];
+  try {
+    accounts = await listAccounts(token);
+  } catch {
+    // ignore — fall through to manual
   }
+
   let accountId;
   if (accounts.length === 1) {
     const only = accounts[0];
     console.log(`Using ${c.cyan(only.name)} ${c.gray('(' + only.id + ')')}.`);
     accountId = only.id;
-  } else {
+  } else if (accounts.length > 1) {
     accountId = await select({
       message: 'Which account?',
       choices: accounts.map((a) => ({
@@ -89,6 +83,46 @@ export async function runSetup({ cwd } = {}) {
         value: a.id,
       })),
     });
+  } else {
+    // Manual fallback. The "Pages — Edit" permission alone doesn't grant
+    // /accounts list access, so this is the common path for tokens scoped
+    // tightly enough to be safe.
+    console.log(
+      "I can't list accounts from this token (it only has Pages permissions, which is fine — that\nis the safer scope). Paste your account ID instead:",
+    );
+    console.log(
+      c.gray(
+        '  Find it on https://dash.cloudflare.com — pick the account, then look at the URL:\n' +
+          '  https://dash.cloudflare.com/' +
+          c.cyan('<this-hex-string-is-your-account-id>') +
+          '/...',
+      ),
+    );
+    while (true) {
+      const id = (
+        await input({
+          message: 'Account ID:',
+          validate: (v) =>
+            /^[a-f0-9]{32}$/.test(v.trim()) ||
+            'That does not look like a Cloudflare account ID (32 hex chars).',
+        })
+      ).trim();
+
+      process.stdout.write(c.gray('  Verifying access… '));
+      try {
+        await verifyAccountAccess(token, id);
+        process.stdout.write(c.green('✓ ok\n'));
+        accountId = id;
+        break;
+      } catch (err) {
+        process.stdout.write(c.red(`✗ ${err.message}\n`));
+        const retry = await confirm({
+          message: 'Try a different account ID?',
+          default: true,
+        });
+        if (!retry) return 1;
+      }
+    }
   }
   console.log();
 
@@ -133,10 +167,10 @@ export async function runSetup({ cwd } = {}) {
   return 0;
 }
 
-async function listAccounts(token) {
+async function cfFetch(token, path) {
   let res;
   try {
-    res = await fetch(`${CF_API}/accounts`, {
+    res = await fetch(`${CF_API}${path}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
   } catch (err) {
@@ -152,7 +186,27 @@ async function listAccounts(token) {
   if (!res.ok || data.success === false) {
     throw new Error(data?.errors?.[0]?.message || `${res.status} ${res.statusText}`);
   }
+  return data;
+}
+
+async function verifyToken(token) {
+  const data = await cfFetch(token, '/user/tokens/verify');
+  const status = data?.result?.status;
+  if (status && status !== 'active') {
+    throw new Error(`Token status: ${status}`);
+  }
+}
+
+async function listAccounts(token) {
+  const data = await cfFetch(token, '/accounts');
   return (data.result ?? []).map((a) => ({ id: a.id, name: a.name }));
+}
+
+// Confirm the token can read this account's Pages projects. This is the
+// permission cf-pages-cleaner actually needs, so a 200 here is the most
+// meaningful "this works" check.
+async function verifyAccountAccess(token, accountId) {
+  await cfFetch(token, `/accounts/${encodeURIComponent(accountId)}/pages/projects`);
 }
 
 function detectShellRc() {
