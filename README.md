@@ -1,14 +1,31 @@
-# cf-pages-cleaner
+<p align="center">
+  <img src="assets/logo.png" alt="South Loop Studios" width="140" />
+</p>
 
-> Sweep out old **Cloudflare Pages** deployments from your terminal — or
-> a tiny local web GUI — without nuking anything that's actually serving
-> traffic.
+<h1 align="center">cf-pages-cleaner</h1>
 
-A focused little CLI by [South Loop Studios](https://southloopstudios.com).
+<p align="center">
+  <em>Sweep out old <strong>Cloudflare Pages</strong> deployments — terminal or local web GUI — without nuking anything that's actually serving traffic.</em>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@southloopstudios/cf-pages-cleaner"><img alt="npm version" src="https://img.shields.io/npm/v/@southloopstudios/cf-pages-cleaner?color=9b6cff&label=npm&style=flat-square" /></a>
+  <a href="https://www.npmjs.com/package/@southloopstudios/cf-pages-cleaner"><img alt="downloads" src="https://img.shields.io/npm/dm/@southloopstudios/cf-pages-cleaner?color=6e3fd6&style=flat-square" /></a>
+  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/npm/l/@southloopstudios/cf-pages-cleaner?color=393244&style=flat-square" /></a>
+  <img alt="node" src="https://img.shields.io/node/v/@southloopstudios/cf-pages-cleaner?color=393244&style=flat-square" />
+  <a href="https://github.com/South-Loop-Studios/cf-pages-cleaner"><img alt="GitHub" src="https://img.shields.io/github/stars/South-Loop-Studios/cf-pages-cleaner?color=393244&style=flat-square" /></a>
+</p>
+
+<p align="center">
+  Maintained by <a href="https://southloopstudios.com"><strong>South Loop Studios</strong></a>
+</p>
+
+---
+
 Cloudflare's dashboard makes you delete deployments one click at a time, and
-`wrangler` doesn't have a bulk-cleanup command. This tool lists every
-deployment for a project, marks the live ones as protected, and lets you
-tick the rest for deletion.
+`wrangler` doesn't have a bulk-cleanup command. **cf-pages-cleaner** lists every
+deployment for a project, marks the live ones as protected, and lets you tick
+the rest for deletion — from the terminal or a tiny localhost web GUI.
 
 ```
 Project: my-marketing-site
@@ -25,6 +42,16 @@ Protected (not selectable):
    ◉ 8b7d22ce  hotfix/og-image            2mo ago  https://8b7d....pages.dev
    …
 ```
+
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#setup">Setup</a> ·
+  <a href="#usage">Usage</a> ·
+  <a href="#protection-rules">Protection rules</a> ·
+  <a href="#troubleshooting">Troubleshooting</a> ·
+  <a href="#faq">FAQ</a>
+</p>
 
 ---
 
@@ -70,17 +97,43 @@ local builds.
 
 ## Features
 
-- **Two UIs in one binary.** Terminal by default, `--web` flips on a tiny
-  local browser GUI styled in the South Loop Studios palette.
-- **Knows what's live.** The current production deployment and the head of
-  every branch alias are marked **PROTECTED** and cannot be selected — in
-  either UI.
-- **Safe by default.** Final `y/N` prompt before any DELETE, plus
-  `--dry-run` for a no-op preview. The web server re-checks protection on
-  every delete request, so a tampered client can't bypass it.
-- **Bulk-friendly.** Tick everything older than 30 days, or by ranges
-  (`1,3,5-9`) in the fallback prompt.
-- **Zero global state.** Just env vars or a `.env` file in the cwd.
+<table>
+<tr>
+<td valign="top" width="50%">
+
+### Two UIs in one binary
+Terminal by default, `--web` flips on a tiny local browser GUI styled in the
+South Loop Studios palette. Same logic, same protection rules.
+
+### Knows what's live
+The current production deployment and the head of every branch alias are
+marked **PROTECTED** and cannot be selected — in either UI.
+
+### Safe by default
+Final `y/N` prompt before any DELETE, plus `--dry-run` for a no-op preview.
+The web server re-checks protection on every delete request, so a tampered
+client can't bypass it.
+
+</td>
+<td valign="top" width="50%">
+
+### Real-time progress
+The web UI streams per-deployment events as each delete resolves —
+`[i/total] ✓ shortId  url` lines as they happen, instead of a frozen UI
+while a 50-item batch churns.
+
+### Guided setup
+`cf-pages-cleaner setup` walks you through token creation, account
+selection, and saving the credentials to either `.env` or your shell rc.
+Re-run safely; existing entries get replaced cleanly.
+
+### Self-updating
+`cf-pages-cleaner update` checks the npm registry, shows installed-vs-latest,
+and runs `npm install -g <pkg>@latest` for you on confirm.
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -330,12 +383,13 @@ Project layout:
 bin/cf-pages-cleaner.mjs       # shebang entry
 src/index.mjs                  # arg parsing & dispatch
 src/setup.mjs                  # guided first-run setup
+src/update.mjs                 # self-upgrade flow
 src/api.mjs                    # Cloudflare REST client
 src/terminal.mjs               # interactive terminal flow
-src/web.mjs                    # local HTTP server
+src/web.mjs                    # local HTTP server (NDJSON streams /api/delete)
 src/web-ui.mjs                 # the single-page HTML for the GUI
 src/utils.mjs                  # types, formatting, protection logic
-assets/logo.svg                # (optional) brand logo for the web UI
+assets/logo.png                # brand logo for the web UI
 ```
 
 The whole thing is plain ESM JavaScript, no build step.
@@ -347,12 +401,19 @@ npm version patch              # bump
 npm publish --access public    # ship
 ```
 
-The `files` field in `package.json` already restricts the npm tarball to
-`bin/`, `src/`, `README.md`, and `LICENSE`.
+The `files` field in `package.json` restricts the npm tarball to `bin/`,
+`src/`, `assets/`, `README.md`, and `LICENSE`.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](./LICENSE). Built by [South Loop
-Studios](https://southloopstudios.com), Birmingham, UK.
+MIT — see [LICENSE](./LICENSE).
+
+<br>
+
+<p align="center">
+  <img src="assets/logo.png" alt="South Loop Studios" width="48" />
+  <br>
+  <sub>Maintained by <a href="https://southloopstudios.com"><strong>South Loop Studios</strong></a></sub>
+</p>
