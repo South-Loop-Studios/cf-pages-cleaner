@@ -55,6 +55,17 @@ below.
 
 `cf-pages-cleaner --help` prints all flags.
 
+### Updating
+
+```bash
+cf-pages-cleaner update
+```
+
+Checks the npm registry, shows the installed version against the latest, and
+runs `npm install -g` for you on confirm. Detects `npx` invocations
+(nothing to update — npx already pulls latest each run) and version-ahead
+local builds.
+
 ---
 
 ## Features

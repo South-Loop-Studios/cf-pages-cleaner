@@ -29,6 +29,7 @@ Usage:
 
 Commands:
   setup              Guided one-time setup for credentials. Recommended on first run.
+  update             Check for a newer version on npm and upgrade in place.
 
 Options:
   --project <name>   Skip the picker; jump straight into one project.
@@ -77,6 +78,13 @@ export async function main(argv) {
   if (cmd === 'setup') {
     const { runSetup } = await import('./setup.mjs');
     return await runSetup({ cwd: process.cwd() });
+  }
+  if (cmd === 'update' || cmd === 'upgrade') {
+    const { runUpdate } = await import('./update.mjs');
+    return await runUpdate({
+      currentVersion: VERSION,
+      isNpx: /[/\\]_npx[/\\]/.test(process.argv[1] || ''),
+    });
   }
   if (cmd) {
     process.stderr.write(`Unknown command: ${cmd}\nRun \`${inv} --help\`.\n`);
