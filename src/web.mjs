@@ -5,9 +5,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import open from 'open';
 import { fetchDeployments } from './api.mjs';
 import { bold, c } from './utils.mjs';
-import { FALLBACK_LOGO_SVG, WEB_HTML } from './web-ui.mjs';
+import { FALLBACK_LOGO_SVG, webHtml } from './web-ui.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const PKG_VERSION = JSON.parse(
+  readFileSync(resolve(__dirname, '..', 'package.json'), 'utf8'),
+).version;
 // Search order for a brand logo: cwd/assets, then the package's own assets/.
 const LOGO_SEARCH_DIRS = [
   resolve(process.cwd(), 'assets'),
@@ -71,7 +74,7 @@ async function handle(req, res, client) {
   // GET /
   if (req.method === 'GET' && url.pathname === '/') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(WEB_HTML);
+    res.end(webHtml(PKG_VERSION));
     return;
   }
 

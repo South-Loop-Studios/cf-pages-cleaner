@@ -4,10 +4,13 @@
  * local server. It uses the South Loop Studios palette: near-black background,
  * vibrant violet accent.
  *
+ * Exposed as a function of `version` so the displayed CLI version always tracks
+ * package.json — no hardcoded drift.
+ *
  * The logo is fetched from `/assets/logo` (the server falls back to an inline
  * SVG placeholder if no logo file is found on disk).
  */
-export const WEB_HTML = String.raw`<!doctype html>
+export const webHtml = (version) => String.raw`<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -49,13 +52,27 @@ export const WEB_HTML = String.raw`<!doctype html>
     position: sticky; top: 0; z-index: 5;
     background: rgba(10, 6, 18, 0.7);
   }
+  /* Left: app name + version */
+  header.brand .product {
+    font-size: 12px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  header.brand .product strong { color: var(--accent-hi); font-weight: 600; }
+  /* Right: brand mark + wordmark, pushed by margin-left:auto */
+  header.brand .brand-right {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 12px;
+  }
   header.brand .logo {
     width: 36px; height: 36px;
     display: grid; place-items: center;
   }
   header.brand .logo img,
   header.brand .logo svg { width: 100%; height: 100%; display: block; }
-  header.brand .wordmark { display: flex; flex-direction: column; line-height: 1.1; }
+  header.brand .wordmark {
+    display: flex; flex-direction: column; line-height: 1.1;
+    text-align: right;
+  }
   header.brand .wordmark .name {
     font-weight: 600; font-size: 15px; letter-spacing: 0.01em; color: var(--text);
   }
@@ -63,11 +80,6 @@ export const WEB_HTML = String.raw`<!doctype html>
     font-size: 11px; color: var(--muted); margin-top: 2px;
     text-transform: uppercase; letter-spacing: 0.12em;
   }
-  header.brand .product {
-    margin-left: auto; font-size: 12px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.12em;
-  }
-  header.brand .product strong { color: var(--accent-hi); font-weight: 600; }
 
   /* ------------- main shell ------------- */
   main {
@@ -179,14 +191,16 @@ export const WEB_HTML = String.raw`<!doctype html>
 <body>
 
 <header class="brand">
-  <div class="logo">
-    <img src="/assets/logo" alt="South Loop Studios" onerror="this.style.display='none'">
+  <div class="product">cf-pages-cleaner <strong>v${version}</strong></div>
+  <div class="brand-right">
+    <div class="wordmark">
+      <span class="name">South Loop Studios</span>
+      <span class="sub">Birmingham, UK</span>
+    </div>
+    <div class="logo">
+      <img src="/assets/logo" alt="South Loop Studios" onerror="this.style.display='none'">
+    </div>
   </div>
-  <div class="wordmark">
-    <span class="name">South Loop Studios</span>
-    <span class="sub">Birmingham, UK</span>
-  </div>
-  <div class="product">cf-pages-cleaner <strong>v0.1</strong></div>
 </header>
 
 <main>
