@@ -43,6 +43,15 @@ Protected (not selectable):
    …
 ```
 
+#### What those tags mean
+
+| Tag | Meaning |
+|-----|---------|
+| **`PROD`** | The **canonical production deployment** — the one currently serving your site's main URL (e.g. `your-site.pages.dev` or your custom domain). |
+| **`ALIAS`** | The **head** (most recent deployment) of a branch. Cloudflare Pages gives each branch a stable preview subdomain like `feature-x.your-site.pages.dev` that always resolves to whichever deployment is currently the head of that branch. Delete the head and the alias URL breaks. |
+
+Both are flagged **PROTECTED** in the UI and can't be selected for deletion. See [Protection rules](#protection-rules) for how this is enforced (server-side too) and how to free a head for deletion if you really need to.
+
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
   <a href="#features">Features</a> ·
