@@ -77,7 +77,7 @@ export const webHtml = (version) => String.raw`<!doctype html>
     font-weight: 600; font-size: 15px; letter-spacing: 0.01em; color: var(--text);
   }
   header.brand .wordmark .sub {
-    font-size: 11px; color: var(--muted); margin-top: 2px;
+    font-size: 11px; color: var(--muted); margin-bottom: 2px;
     text-transform: uppercase; letter-spacing: 0.12em;
   }
 
@@ -194,8 +194,8 @@ export const webHtml = (version) => String.raw`<!doctype html>
   <div class="product">cf-pages-cleaner <strong>v${version}</strong></div>
   <div class="brand-right">
     <div class="wordmark">
+      <span class="sub">Maintained by</span>
       <span class="name">South Loop Studios</span>
-      <span class="sub">Birmingham, UK</span>
     </div>
     <div class="logo">
       <img src="/assets/logo" alt="South Loop Studios" onerror="this.style.display='none'">
@@ -375,13 +375,69 @@ async function deleteSelected() {
   $('#deleteBtn').disabled = true;
   appendLog(verb + ' ' + ids.length + ' deployment(s)…');
 
-  const res = await jpost('/api/delete', {
-    project: state.project, ids, dryRun: dry,
-  });
-  for (const r of (res.results || [])) {
-    if (r.ok) appendLog('  ✓ ' + r.id + (r.dryRun ? ' (dry-run)' : ''), 'ok');
-    else      appendLog('  ✗ ' + r.id + ': ' + r.error, 'err');
+  // The server streams NDJSON: one JSON object per line as each delete
+  // completes, then a final {type:'done', ok, failed} summary. Read the
+  // body progressively so we can render results as they arrive.
+  let res;
+  try {
+    res = await fetch('/api/delete', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ project: state.project, ids, dryRun: dry }),
+    });
+  } catch (err) {
+    appendLog('Network error: ' + err.message, 'err');
+    updateDeleteBtn(); return;
   }
+
+  // Non-streaming error path: the server uses sendJson() (single-shot JSON)
+  // for 4xx/5xx, not NDJSON. Detect that and bail out with the message.
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.startsWith('application/x-ndjson')) {
+    let payload;
+    try { payload = await res.json(); } catch { payload = { error: 'unexpected response' }; }
+    appendLog('  ✗ ' + (payload.error || ('HTTP ' + res.status)), 'err');
+    updateDeleteBtn(); return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  let summary = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf('\n')) !== -1) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line) continue;
+      let ev;
+      try { ev = JSON.parse(line); } catch { continue; }
+      if (ev.type === 'done') {
+        summary = ev;
+      } else {
+        // result event
+        const tail = ev.url ? '  ' + ev.url : '';
+        const dryTag = ev.dryRun ? ' (dry-run)' : '';
+        const prefix = '  [' + ev.index + '/' + ev.total + '] ';
+        if (ev.ok) appendLog(prefix + '✓ ' + ev.shortId + tail + dryTag, 'ok');
+        else      appendLog(prefix + '✗ ' + ev.shortId + ': ' + ev.error, 'err');
+      }
+    }
+  }
+
+  if (summary) {
+    const verbDone = summary.dryRun ? 'Pretend-delete' : 'Delete';
+    const ok = summary.ok ?? 0;
+    const failed = summary.failed ?? 0;
+    appendLog(
+      verbDone + ' complete · ' + ok + ' ok' + (failed ? ' · ' + failed + ' failed' : ''),
+      failed ? 'err' : 'ok',
+    );
+  }
+
   if (!dry) await loadDeployments(state.project);
   updateDeleteBtn();
 }

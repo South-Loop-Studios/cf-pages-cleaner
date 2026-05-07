@@ -136,7 +136,9 @@ async function handle(req, res, client) {
     return;
   }
 
-  // POST /api/delete
+  // POST /api/delete  — streams NDJSON, one event per deployment, so the
+  // client can show progress as deletes happen instead of waiting for the
+  // whole batch to finish.
   if (req.method === 'POST' && url.pathname === '/api/delete') {
     let body;
     try {
@@ -161,29 +163,57 @@ async function handle(req, res, client) {
     }
     const byId = new Map(deps.map((d) => [d.id, d]));
 
-    const results = [];
-    for (const id of ids) {
+    res.writeHead(200, {
+      'Content-Type': 'application/x-ndjson',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+    });
+
+    const writeEvent = (obj) => res.write(JSON.stringify(obj) + '\n');
+
+    let okCount = 0;
+    let failCount = 0;
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
       const d = byId.get(id);
+      const base = {
+        type: 'result',
+        index: i + 1,
+        total: ids.length,
+        id,
+        shortId: d?.shortId ?? id.slice(0, 8),
+        url: d?.url ?? '',
+      };
+
       if (!d) {
-        results.push({ id, ok: false, error: 'not found' });
+        writeEvent({ ...base, ok: false, error: 'not found' });
+        failCount++;
         continue;
       }
       if (d.protected) {
-        results.push({ id, ok: false, error: 'protected' });
+        writeEvent({ ...base, ok: false, error: 'protected' });
+        failCount++;
         continue;
       }
       if (dryRun) {
-        results.push({ id, ok: true, dryRun: true });
+        writeEvent({ ...base, ok: true, dryRun: true });
+        okCount++;
         continue;
       }
       try {
         await client.deleteDeployment(project, id);
-        results.push({ id, ok: true });
+        writeEvent({ ...base, ok: true });
+        okCount++;
       } catch (err) {
-        results.push({ id, ok: false, error: err.message });
+        writeEvent({ ...base, ok: false, error: err.message });
+        failCount++;
       }
+      // tiny pause to be polite to the API (matches the terminal pacing)
+      await new Promise((r) => setTimeout(r, 100));
     }
-    sendJson(res, 200, { results });
+
+    writeEvent({ type: 'done', ok: okCount, failed: failCount, dryRun: !!dryRun });
+    res.end();
     return;
   }
 
