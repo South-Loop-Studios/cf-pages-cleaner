@@ -415,6 +415,34 @@ The `files` field in `package.json` restricts the npm tarball to `bin/`,
 
 ---
 
+## Disclaimer
+
+This tool **permanently deletes Cloudflare Pages deployments**. Cloudflare
+doesn't keep tombstones — once a deployment is gone, it's gone. The
+[Protection rules](#protection-rules) and `--dry-run` flag exist to make
+accidents difficult, not impossible.
+
+**By using `cf-pages-cleaner` you accept full responsibility for the
+deployments it deletes on your behalf.** South Loop Studios is not
+liable for any production outage, accidental data loss, broken preview
+alias, irate stakeholder, or any other direct or indirect consequence
+of running this tool — including the case where you tick the wrong box,
+hit enter, and nuke a deployment that turned out to be load-bearing.
+
+If you're not 100% sure what you're deleting:
+
+- Run with **`--dry-run`** first to preview the kill list with no API
+  DELETE calls.
+- Try it on a low-stakes project before pointing it at anything
+  customer-facing.
+- Re-deploy live branches before cleaning house — the new deployments
+  inherit the aliases, and the old ones become safe to remove.
+
+This README and the inline help are best-effort; the formal warranty
+disclaimer is in [LICENSE](./LICENSE).
+
+---
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).
